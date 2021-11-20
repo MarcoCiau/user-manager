@@ -16,15 +16,15 @@ class Server {
 
     middlewares() {
         /* enable cors */
-        this.app.use(cors({origin: this.corsOrigin}));
+        this.app.use(cors());
         /* parse application/json requests*/
-        this.app.use(express.json);
+        this.app.use(express.json());
         /* parse application/x-www-form-urlencoded requests. Only parse string or arrays*/
         this.app.use(express.urlencoded({extended: false}));
     }
 
     routes() {
-        this.app.use('api/v1/user', userRoutes);
+        this.app.use('/api/v1/user', userRoutes);
     }
 
     listen() {
