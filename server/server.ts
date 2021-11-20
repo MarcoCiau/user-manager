@@ -1,7 +1,7 @@
 import express, { Application } from 'express';
 import envConfig from '../config/config';
 import cors from 'cors';
-
+import userRoutes from '../routes/user';
 class Server {
     private app: Application;
     private port: string;
@@ -11,6 +11,7 @@ class Server {
         this.port = envConfig.SERVER_PORT || '8000';
         this.corsOrigin = envConfig.CORS_ORIGIN || 'localhost:8000';
         this.middlewares();
+        this.routes();
     }
 
     middlewares() {
@@ -20,6 +21,10 @@ class Server {
         this.app.use(express.json);
         /* parse application/x-www-form-urlencoded requests. Only parse string or arrays*/
         this.app.use(express.urlencoded({extended: false}));
+    }
+
+    routes() {
+        this.app.use('api/v1/user', userRoutes);
     }
 
     listen() {
