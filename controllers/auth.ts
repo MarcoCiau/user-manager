@@ -1,7 +1,24 @@
-import {Request, Response} from 'express';
+import { Request, Response } from 'express';
+import UserModel from '../models/user';
+import { hashPassword } from '../util/auth.util';
 
-export const signup = (req: Request, res: Response) => {
-    res.status(200).json({ msg: 'signup' });
+export const signup = async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    try {
+        const userExists = await UserModel.findOne({ email });
+        if (userExists) return res.status(400).json({ msg: 'User already exists.' });
+        const hashedPassword: string = await hashPassword(password);
+        const userDoc = new UserModel({
+            email,
+            password: hashedPassword
+        });
+        const result = await userDoc.save();
+        res.status(200).json({ msg: 'success', user: result });
+    } catch (error) {
+        console.log('Signing up user failed.');
+        res.status(500).json({msg: 'something went wrong.'})
+        
+    }
 }
 
 export const signin = (req: Request, res: Response) => {
