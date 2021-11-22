@@ -1,13 +1,18 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, Document } from "mongoose";
+import bcrypt from 'bcrypt';
 
 interface User {
     email: string,
     password: string,
 }
 
-const userSchema = new Schema<User>({
+interface UserDocument extends User, Document {
+    comparePassword: (password: string) => Promise<boolean>;
+}
+
+const userSchema: Schema<UserDocument> = new Schema({
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    password: { type: String, required: true },s
 });
 
 userSchema.methods.toJSON = function () {
@@ -15,6 +20,18 @@ userSchema.methods.toJSON = function () {
     return user;
 }
 
-const UserModel = model<User>('Users', userSchema);
+userSchema.methods.comparePassword = async function (password: string = '') {
+    try {
+        if (!password) {
+            return false;
+        }
+        const isAValidPassword: boolean = await bcrypt.compare(password, this.password);
+        return isAValidPassword;
+    } catch (error) {
+        throw new Error(`Compare Password failed. ${error}`);
+    }
+}
+
+const UserModel = model<UserDocument>('Users', userSchema);
 
 export default UserModel;
