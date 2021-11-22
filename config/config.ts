@@ -5,5 +5,5 @@ export default {
     SERVER_PORT : process.env.PORT,
     CORS_ORIGIN: process.env.CORS_ORIGIN,
     DB_URL: process.env.MONGODB_SRV,
-    SALT_ROUNDS: process.env.SALT_ROUNDS
+    JWT_PRIVATE_KEY: process.env.JWT_KEY || '1234567890ABCDEFGHIJK'
 };
