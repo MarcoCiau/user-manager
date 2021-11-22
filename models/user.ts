@@ -12,7 +12,7 @@ interface UserDocument extends User, Document {
 
 const userSchema: Schema<UserDocument> = new Schema({
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },s
+    password: { type: String, required: true },
 });
 
 userSchema.methods.toJSON = function () {
