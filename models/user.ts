@@ -2,7 +2,7 @@ import { Schema, model } from "mongoose";
 
 interface User {
     email: string,
-    password : string, 
+    password: string,
 }
 
 const userSchema = new Schema<User>({
@@ -10,6 +10,11 @@ const userSchema = new Schema<User>({
     password: { type: String, required: true },
 });
 
-const UserModel = model<User>('User', userSchema);
+userSchema.methods.toJSON = function () {
+    const { password, __v, ...user } = this.toObject();
+    return user;
+}
+
+const UserModel = model<User>('Users', userSchema);
 
 export default UserModel;
