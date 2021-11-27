@@ -7,6 +7,8 @@ validate JWT
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import envConfig from '../config/config';
+import nodemailer from 'nodemailer';
+import smtpTransport from 'nodemailer-smtp-transport';
 
 export const hashPassword = async (password: string) => {
     try {
@@ -30,4 +32,35 @@ export const generateJWT = async (userId: string) => {
             resolve(token);
         });
     })
+}
+
+export const sendEmail = async () => {
+
+    let transporter = nodemailer.createTransport(smtpTransport({
+        name: 'hostgator',
+        host: 'marcociau.com',
+        port: 465,
+        secure: true,
+        auth: {
+            user: "contact@marcociau.com",
+            pass: "6upZR4K$hjwDR7"
+        },
+        tls: {
+            rejectUnauthorized: false
+        }
+    }));
+
+    let mailOptions = {
+        from: 'contact@marcociau.com',
+        to: 'marco@makerlab.mx',
+        subject: 'Felicidades! Te ganaste un auto!',
+        html: '<h3>Da click aquí : </br>'
+    };
+
+    try {
+        const result = await transporter.sendMail(mailOptions);
+        console.log('*********Email sent:********' + result.response);
+    } catch (error) {
+        console.log(error);
+    }
 }
