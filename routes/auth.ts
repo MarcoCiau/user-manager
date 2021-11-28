@@ -7,5 +7,5 @@ router.post('/signup', authValidator.rules(), authValidator.result, authControll
 router.post('/signin', authValidator.rules(), authValidator.result, authController.signin);
 router.post('/forgot', authController.forgotPassword);
 router.post('/reset', authController.resetPassword);
-
+router.post('/refreshToken', authController.refreshToken);
 export default router;
