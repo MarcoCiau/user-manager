@@ -20,6 +20,18 @@ export const hashPassword = async (password: string) => {
     }
 }
 
+export const compareHash = async (data: string, hashed: string) => {
+    try {
+        if (!data) {
+            return false;
+        }
+        const compare: boolean = await bcrypt.compare(data, hashed);
+        return compare;
+    } catch (error) {
+        throw new Error(`Compare Data failed. ${error}`);
+    }
+}
+
 export const generateJWT = async (userId: string) => {
     return new Promise<string>((resolve, reject) => {
         jwt.sign({ userId }, envConfig.JWT_PRIVATE_KEY, { expiresIn: '1h' }, function (error, token = '') {
@@ -34,7 +46,7 @@ export const generateJWT = async (userId: string) => {
     })
 }
 
-export const sendEmail = async () => {
+export const sendEmail = async (toEmail: string, subject: string, resetLink: string) => {
 
     let transporter = nodemailer.createTransport(smtpTransport({
         name: 'hostgator',
@@ -52,9 +64,9 @@ export const sendEmail = async () => {
 
     let mailOptions = {
         from: 'contact@marcociau.com',
-        to: 'marco@makerlab.mx',
-        subject: 'Felicidades! Te ganaste un auto!',
-        html: '<h3>Da click aquí : </br>'
+        to: toEmail,
+        subject: subject,
+        html: `<p>Hi, You requested to reset your password.</p><p> Please, click the link below to reset your password</p> <a href="https://${resetLink}">Reset Password</a>`
     };
 
     try {
