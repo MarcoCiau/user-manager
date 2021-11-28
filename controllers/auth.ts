@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
+import config from '../config/config';
 import UserModel from '../models/user';
 import TokenModel from '../models/token';
-import { hashPassword, generateJWT, sendEmail } from '../util/auth.util';
+import { hashPassword, compareHash, generateJWT, sendEmail } from '../util/auth.util';
 import crypto from 'crypto';
 
 export const signup = async (req: Request, res: Response) => {
@@ -62,16 +63,34 @@ export const forgotPassword = async (req: Request, res: Response) => {
             createdAt: new Date()
         });
         const result = await tokenDoc.save();
-        if (!result) return res.status(500).json({ msg: 'sGenerating new token failed' });
-        await sendEmail();
-        res.status(200).json({ msg: 'forgot password', result });
+        if (!result) return res.status(500).json({ msg: 'Generating new token failed' });
+        const link: string = `${config.CLIENT_URL}/passwordReset?token=${newToken}&id=${user._id}`;
+        await sendEmail(user.email, "Restablecer Contraseña", link);
+        res.status(200).json({ msg: 'forgot password', result, link });
     } catch (error) {
         console.log('forgot password failed.', error);
         res.status(500).json({ msg: 'something went wrong.' })
     }
-
 }
 
-export const resetPassword = (req: Request, res: Response) => {
-    res.status(200).json({ msg: 'reset password' });
+export const resetPassword = async (req: Request, res: Response) => {
+    /*
+    - check if token exists
+    - compare plain token with hashed
+    - hash and save new password
+    */
+    try {
+        const { userId, token, password } = req.body;
+        const resetToken = await TokenModel.findOne({ userId });
+        if (!resetToken) return res.status(400).json({ msg: 'Invalid o expired password reset token.' });
+        const isValidToken: boolean = await compareHash(token, resetToken.token);
+        if (!isValidToken) return res.status(400).json({ msg: 'Invalid o expired password reset token.' });
+        const hashedPassword: string = await hashPassword(password);
+        const updatedUser = await UserModel.findOneAndUpdate({ _id: userId }, { password: hashedPassword }, { new: true });
+        resetToken.deleteOne({ userId });
+        res.status(200).json({ msg: 'success', user: updatedUser });
+    } catch (error) {
+        console.log('reset user password failed.', error);
+        res.status(500).json({ msg: 'something went wrong.' })
+    }
 }
