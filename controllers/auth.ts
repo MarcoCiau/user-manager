@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import config from '../config/config';
 import UserModel from '../models/user';
-import TokenModel from '../models/token';
+import PasswordTokenModel from '../models/passwordToken';
+import RefreshTokenModel from '../models/refreshToken';
 import { hashPassword, compareHash, generateAccessToken, generateRefreshToken, verifyRefreshToken, sendEmail } from '../util/auth.util';
 import crypto from 'crypto';
 
@@ -11,17 +12,12 @@ export const signup = async (req: Request, res: Response) => {
         const userExists = await UserModel.findOne({ email });
         if (userExists) return res.status(400).json({ msg: 'User already exists.' });
         const hashedPassword: string = await hashPassword(password);
-
         const userDoc = new UserModel({
             email,
             password: hashedPassword
         });
-        
-        const result = await userDoc.save();
-        const [refreshToken, accessToken] = await Promise.all([generateRefreshToken(result._id), generateAccessToken(result._id)]);
-        const refreshTokenEncrypted = await hashPassword(refreshToken);
-        const updatedUser = await UserModel.findOneAndUpdate({ _id: result._id }, { refreshToken: refreshTokenEncrypted }, { new: true });
-        res.status(200).json({ msg: 'success', user: updatedUser, accessToken, refreshToken });
+        const result = await userDoc.save();       
+        res.status(200).json({ msg: 'success', user: result });
     } catch (error) {
         console.log('Signing up user failed.', error);
         res.status(500).json({ msg: 'something went wrong.' })
@@ -31,16 +27,27 @@ export const signup = async (req: Request, res: Response) => {
 export const signin = async (req: Request, res: Response) => {
     const { email, password } = req.body;
     try {
+        /* Verify User */
         const userExists = await UserModel.findOne({ email });
         if (!userExists) return res.status(400).json({ msg: 'User Doesn\'t exists or the email is invalid.' });
+        /* Validate Password */
         const isValidPassword = await userExists.comparePassword(password);
         if (!isValidPassword) {
             return res.status(400).json({ msg: 'Invalid Password.' });
         }
+        /* Generate Refresh & Access Tokens */
         const [refreshToken, accessToken] = await Promise.all([generateRefreshToken(userExists._id), generateAccessToken(userExists._id)]);
-        const refreshTokenEncrypted = await hashPassword(refreshToken);
-        const updatedUser = await UserModel.findOneAndUpdate({ _id: userExists._id }, { refreshToken: refreshTokenEncrypted }, { new: true });
-        res.status(200).json({ msg: 'success', user: updatedUser, accessToken, refreshToken });
+        /* Check if current refresh token exists */
+        const refreshTokenExists = await RefreshTokenModel.findOne({userId: userExists._id});
+        if (refreshTokenExists) refreshTokenExists.deleteOne();
+        /* Create & Save new Refresh Token */
+        const refreshTokenDoc = new RefreshTokenModel({
+            userId: userExists._id,
+            refreshToken: refreshToken
+        });
+        const newRefreshToken = await refreshTokenDoc.save();  
+        /* Send Response */      
+        res.status(200).json({ msg: 'success', user: userExists, accessToken, refreshToken:newRefreshToken.refreshToken });
     } catch (error) {
         console.log('Signing in user failed.', error);
         res.status(500).json({ msg: 'something went wrong.' })
@@ -59,11 +66,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
         const { email } = req.body;
         const user = await UserModel.findOne({ email });
         if (!user) return res.status(400).json({ msg: 'User Doesn\'t exists or the email is invalid.' });
-        const oldToken = await TokenModel.findOne({ userId: user._id });
+        const oldToken = await PasswordTokenModel.findOne({ userId: user._id });
         if (oldToken) oldToken.deleteOne();
         let newToken: string = crypto.randomBytes(32).toString('hex');
         let hashedToken: string = await hashPassword(newToken);
-        const tokenDoc = new TokenModel({
+        const tokenDoc = new PasswordTokenModel({
             userId: user._id,
             token: hashedToken,
             createdAt: new Date()
@@ -87,7 +94,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     */
     try {
         const { userId, token, password } = req.body;
-        const resetToken = await TokenModel.findOne({ userId });
+        const resetToken = await PasswordTokenModel.findOne({ userId });
         if (!resetToken) return res.status(400).json({ msg: 'Invalid o expired password reset token.' });
         const isValidToken: boolean = await compareHash(token, resetToken.token);
         if (!isValidToken) return res.status(400).json({ msg: 'Invalid o expired password reset token.' });
@@ -110,18 +117,25 @@ export const refreshToken = async (req: Request, res: Response) => {
     */
     try {
         const { refreshToken, userId } = req.body;
-        const user = await UserModel.findOne({userId});
-        if (!user) return res.status(400).json({ msg: 'User doesn\'t exists or the userId is Invalid.' });
-        const isValidToken: boolean = await compareHash(refreshToken, user.refreshToken);
-        if (!isValidToken) return res.status(400).json({ msg: 'Invalid refresh token.' });
-        const validRefreshToken = await verifyRefreshToken(refreshToken);
-        if (!validRefreshToken) return res.status(400).json({ msg: 'Invalid refresh token.' })
-        const [newRefreshToken, accessToken] = await Promise.all([generateRefreshToken(user._id), generateAccessToken(user._id)]);
-        const refreshTokenEncrypted = await hashPassword(newRefreshToken);
-        const updatedUser = await UserModel.findOneAndUpdate({ _id: user._id }, { refreshToken: refreshTokenEncrypted }, { new: true });
-        res.status(200).json({ msg: 'success', user: updatedUser, accessToken, refreshToken: newRefreshToken });
+        /* Check if current refresh token exists */
+        const refreshTokenExists = await RefreshTokenModel.findOne({userId, refreshToken});
+        if (!refreshTokenExists) return res.status(400).json({ msg: 'Refresh Token Doesn\t exists in DB' });
+        refreshTokenExists.deleteOne();
+        /* Verify Refresh Token */
+        const validToken = await verifyRefreshToken(refreshToken);
+        if (!validToken) return res.status(400).json({ msg: 'Verify JWT Failed: Refresh Token is expired or invalid' });
+        /* Generate Refresh & Access Tokens */
+        const [newRefreshToken, accessToken] = await Promise.all([generateRefreshToken(userId), generateAccessToken(userId)]);
+        /* Create & Save new Refresh Token */
+        const refreshTokenDoc = new RefreshTokenModel({
+            userId,
+            refreshToken: newRefreshToken
+        });
+        const result = await refreshTokenDoc.save();  
+        /* Send Response */      
+        res.status(200).json({ msg: 'success', accessToken, refreshToken:result.refreshToken });
     } catch (error) {
-        console.log('reset user password failed.', error);
+        console.log('reset refresh token failed.', error);
         res.status(500).json({ msg: 'something went wrong.' });
     }
 }
