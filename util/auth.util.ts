@@ -28,7 +28,8 @@ const verifyJWT = (token: string, privateKey: string) => {
     return new Promise((resolve, reject) => {
         jwt.verify(token, privateKey, function (err: VerifyErrors | null, decoded: object | undefined) {
             if (err) {
-                reject(err);
+                console.log("Verify Token Error: ", err);
+                resolve(null);
             }
             resolve(decoded);
         });
@@ -62,7 +63,7 @@ export const generateAccessToken = async (userId: string) => {
 };
 
 export const generateRefreshToken = async (userId: string) => {
-    return generateJWT(userId, config.REFRESH_TOKEN_KEY, '60d');
+    return generateJWT(userId, config.REFRESH_TOKEN_KEY, '60000');
 };
 
 export const verifyAccessToken = async (token: string) => {
