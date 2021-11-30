@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 
 interface User {
     email: string,
-    password: string,
+    password: string
 }
 
 interface UserDocument extends User, Document {
@@ -12,7 +12,7 @@ interface UserDocument extends User, Document {
 
 const userSchema: Schema<UserDocument> = new Schema({
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    password: { type: String, required: true }
 });
 
 userSchema.methods.toJSON = function () {

@@ -5,10 +5,36 @@ generate JWT
 validate JWT
 */
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import envConfig from '../config/config';
+import jwt, { VerifyErrors } from 'jsonwebtoken';
+import config from '../config/config';
 import nodemailer from 'nodemailer';
 import smtpTransport from 'nodemailer-smtp-transport';
+
+const generateJWT = async (userId: string, privateKey: string, expires: string) => {
+    return new Promise<string>((resolve, reject) => {
+        jwt.sign({ userId }, privateKey, { expiresIn: expires }, function (error, token = '') {
+            if (error) {
+                reject(error);
+            }
+            if (!token) {
+                reject(null)
+            }
+            resolve(token);
+        });
+    })
+};
+
+const verifyJWT = (token: string, privateKey: string) => {
+    return new Promise((resolve, reject) => {
+        jwt.verify(token, privateKey, function (err: VerifyErrors | null, decoded: object | undefined) {
+            if (err) {
+                console.log("Verify Token Error: ", err);
+                resolve(null);
+            }
+            resolve(decoded);
+        });
+    })
+};
 
 export const hashPassword = async (password: string) => {
     try {
@@ -32,19 +58,31 @@ export const compareHash = async (data: string, hashed: string) => {
     }
 }
 
-export const generateJWT = async (userId: string) => {
-    return new Promise<string>((resolve, reject) => {
-        jwt.sign({ userId }, envConfig.JWT_PRIVATE_KEY, { expiresIn: '1h' }, function (error, token = '') {
-            if (error) {
-                reject(error);
-            }
-            if (!token) {
-                reject('Invalid JWT Token.')
-            }
-            resolve(token);
-        });
-    })
-}
+export const generateAccessToken = async (userId: string) => {
+    return generateJWT(userId, config.ACCESS_TOKEN_KEY, '1h');
+};
+
+export const generateRefreshToken = async (userId: string) => {
+    return generateJWT(userId, config.REFRESH_TOKEN_KEY, '60000');
+};
+
+export const verifyAccessToken = async (token: string) => {
+    return verifyJWT(token, config.ACCESS_TOKEN_KEY);
+};
+
+export const verifyRefreshToken = async (token: string) => {
+    return verifyJWT(token, config.REFRESH_TOKEN_KEY);
+};
+
+export const getUserIdFromToken = (token: string) => {
+    try {
+        jwt.decode(token)
+        
+    } catch (error) {
+        
+    }
+};
+
 
 export const sendEmail = async (toEmail: string, subject: string, resetLink: string) => {
 
