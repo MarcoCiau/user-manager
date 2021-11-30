@@ -1,4 +1,4 @@
-import { Schema, model, Document, ObjectId, Types } from "mongoose";
+import { Schema, model, Types } from "mongoose";
 
 interface Token {
     userId: Types.ObjectId,
@@ -22,6 +22,6 @@ const tokenSchema:Schema<Token> = new Schema({
         default: new Date()
      }
 });
-const TokenModel = model<Token>('Tokens', tokenSchema);
+const PasswordTokenModel = model<Token>('PasswordTokens', tokenSchema);
 
-export default TokenModel;
+export default PasswordTokenModel;
