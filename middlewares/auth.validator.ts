@@ -1,11 +1,47 @@
 import { body, validationResult, Result } from 'express-validator';
 import { Request, Response } from 'express';
+
 export const rules = () => {
     return (
         [
             body('password')
                 .isLength({ min: 8 })
                 .trim(),
+            body('email')
+                .isEmail()
+                .normalizeEmail()
+        ]
+    )
+};
+
+export const resetPasswordRules = () => {
+    return (
+        [
+            body('userId')
+                .isMongoId(),
+            body('token')
+                .notEmpty(),
+            body('password')
+                .isLength({ min: 8 })
+                .trim()
+        ]
+    )
+};
+
+export const refreshTokendRules = () => {
+    return (
+        [
+            body('userId')
+                .isMongoId(),
+            body('refreshToken')
+                .notEmpty()
+        ]
+    )
+};
+
+export const forgotPasswordRules = () => {
+    return (
+        [
             body('email')
                 .isEmail()
                 .normalizeEmail()
