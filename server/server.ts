@@ -4,6 +4,7 @@ import connectDB from '../config/db';
 import cors from 'cors';
 import userRoutes from '../routes/user';
 import authRoutes from '../routes/auth';
+import clientRoutes from '../routes/client';
 class Server {
     private app: Application;
     private port: string;
@@ -28,6 +29,7 @@ class Server {
     routes() {
         this.app.use('/api/v1/user', userRoutes);
         this.app.use('/api/v1/auth', authRoutes);
+        this.app.use('/api/v1/client', clientRoutes);
     }
 
     listen() {
